@@ -2,7 +2,7 @@ from typing import Callable
 
 import pytest
 
-from starlette.background import BackgroundTask, BackgroundTasks
+from starlette.background import BackgroundTask, BackgroundTasks, deferred_run
 from starlette.responses import Response
 from starlette.testclient import TestClient
 
@@ -57,6 +57,54 @@ def test_multiple_tasks(test_client_factory: Callable[..., TestClient]):
         tasks.add_task(increment, amount=1)
         tasks.add_task(increment, amount=2)
         tasks.add_task(increment, amount=3)
+        response = Response(
+            "tasks initiated", media_type="text/plain", background=tasks
+        )
+        await response(scope, receive, send)
+
+    client = test_client_factory(app)
+    response = client.get("/")
+    assert response.text == "tasks initiated"
+    assert TASK_COUNTER == 1 + 2 + 3
+
+
+def test_multiple_tasks_deferred_run(test_client_factory: Callable[..., TestClient]):
+    TASK_COUNTER = 0
+
+    @deferred_run
+    def increment(amount: int):
+        nonlocal TASK_COUNTER
+        TASK_COUNTER += amount
+
+    async def app(scope, receive, send):
+        tasks = BackgroundTasks()
+        tasks.add_task(increment(1))
+        tasks.add_task(increment(2))
+        tasks.add_task(increment(3))
+        response = Response(
+            "tasks initiated", media_type="text/plain", background=tasks
+        )
+        await response(scope, receive, send)
+
+    client = test_client_factory(app)
+    response = client.get("/")
+    assert response.text == "tasks initiated"
+    assert TASK_COUNTER == 1 + 2 + 3
+
+
+def test_multiple_tasks_deferred_run_async(test_client_factory: Callable[..., TestClient]):
+    TASK_COUNTER = 0
+
+    @deferred_run
+    async def increment(amount: int):
+        nonlocal TASK_COUNTER
+        TASK_COUNTER += amount
+
+    async def app(scope, receive, send):
+        tasks = BackgroundTasks()
+        tasks.add_task(increment(1))
+        tasks.add_task(increment(2))
+        tasks.add_task(increment(3))
         response = Response(
             "tasks initiated", media_type="text/plain", background=tasks
         )

@@ -41,3 +41,16 @@ class BackgroundTasks(BackgroundTask):
     async def __call__(self) -> None:
         for task in self.tasks:
             await task()
+
+
+def deferred_run(func: typing.Callable[P, typing.Any]) -> typing.Callable[P, typing.Any]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> typing.Callable[P, typing.Any]:
+        if is_async_callable(func):
+            async def async_wrapper():
+                await func(*args, **kwargs)
+            return async_wrapper
+        else:
+            def sync_wrapper():
+                func(*args, **kwargs)
+            return sync_wrapper
+    return wrapper
