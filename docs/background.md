@@ -77,7 +77,7 @@ app = Starlette(routes=routes)
 
 Signature: `deferred_run(func)(*args, **kwargs)`
 
-Used to type the response of a background job.
+Use if you want to use typed function arguments.
 
 ```python
 from starlette.applications import Starlette
